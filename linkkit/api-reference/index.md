@@ -22,11 +22,17 @@ Each instance of the library has its own beat timeline that starts when the libr
 [`ABLLinkRef`](#abllinkref)<br>
 Reference to an instance of the library.
 
+[`ABLLinkTimelineRef`](#abllinktimelineref)<br>
+A reference to a representation of a mapping between time and beats for varying quanta.
+
 [`ABLLinkSessionTempoCallback`](#abllinksessiontempocallback)<br>
 Called if Session Tempo changes.
 
 [`ABLLinkIsEnabledCallback`](#abllinkisenabledcallback)<br>
 Called if isEnabled state changes.
+
+[`ABLLinkIsConnectedCallback`](#abllinkisconnectedcallback)<br>
+Called if isConnected state changes.
 
 ### Functions
 
@@ -51,29 +57,41 @@ Invoked on the main thread when the tempo of the Link session changes.
 [`ABLLinkSetIsEnabledCallback`](#abllinksetisenabledcallback)<br>
 Invoked on the main thread when the user changes the enabled state of the library via the Link settings view.
 
-[`ABLLinkProposeTempo`](#abllinkproposetempo)<br>
-Propose a new tempo to the link session.
+[`ABLLinkSetIsConnectedCallback`](#abllinksetisconnectedcallback)<br>
+Invoked on the main thread when the user changes the enabled state of the library via the Link settings view.
 
-[`ABLLinkGetSessionTempo`](#abllinkgetsessiontempo)<br>
-Get the current tempo for the link session in Beats Per Minute.
+[`ABLLinkCaptureAudioTimeline`](#abllinkcaptureaudiotimeline)<br>
+Capture the current Link timeline from the audio thread.
+
+[`ABLLinkCommitAudioTimeline`](#abllinkcommitaudiotimeline)<br>
+Commit the given timeline to the Link session from the audio thread.
+
+[`ABLLinkCaptureAppTimeline`](#abllinkcaptureapptimeline)<br>
+Capture the current Link timeline from the main application thread.
+
+[`ABLLinkCommitAppTimeline`](#abllinkcommitapptimeline)<br>
+Commit the timeline to the Link session from the main application thread.
+
+[`ABLLinkGetTempo`](#abllinkgettempo)<br>
+The tempo of the given timeline, in Beats Per Minute.
+
+[`ABLLinkSetTempo`](#abllinksettempo)<br>
+Set the timeline tempo to the given bpm value, taking effect at the given host time.
 
 [`ABLLinkBeatTimeAtHostTime`](#abllinkbeattimeathosttime)<br>
-Conversion function to determine which value on the beat timeline should be hitting the device's output at the given host time.
+Get the beat value corresponding to the given host time for the given quantum.
 
 [`ABLLinkHostTimeAtBeatTime`](#abllinkhosttimeatbeattime)<br>
-Conversion function to determine which host time at the device's output represents the given beat time value.
+Get the host time at which the sound corresponding to the given beat time and quantum reaches the device's audio output.
 
-[`ABLLinkResetBeatTime`](#abllinkresetbeattime)<br>
-Reset the beat timeline with a desire to map the given beat time to the given host time, returning the actual beat time value that maps to the given host time.
-
-[`ABLLinkSetQuantum`](#abllinksetquantum)<br>
-Set the value used for quantization to the shared beat grid.
-
-[`ABLLinkGetQuantum`](#abllinkgetquantum)<br>
-Get the value currently being used by the system for quantization to the shared beat grid.
-
-[`ABLLinkPhase`](#abllinkphase)<br>
+[`ABLLinkPhaseAtTime`](#abllinkphaseattime)<br>
 Get the phase for a given beat time value on the shared beat grid with respect to the given quantum.
+
+[`ABLLinkRequestBeatAtTime`](#abllinkrequestbeatattime)<br>
+Attempt to map the given beat time to the given host time in the context of the given quantum.
+
+[`ABLLinkForceBeatAtTime`](#abllinkforcebeatattime)<br>
+Rudely re-map the beat/time relationship for all peers in a session.
 
 #### `ABLLinkRef`
 
@@ -109,14 +127,11 @@ Called if isEnabled state changes.
 
 #### `ABLLinkNew`
 
-Initialize the library, providing an initial tempo and sync quantum.
+Initialize the library, providing an initial tempo.
 
 <code class="is-block"><span>ABLLinkRef</span> ABLLinkNew(
-    <span>double</span> initialBpm,
-    <span>double</span> syncQuantum);
+    <span>double</span> initialBpm);
 </code>
-
-The sync quantum is a value in beats that represents the granularity of synchronizaton with the shared quantization grid. A reasonable default value would be 1, which would guarantee that beat onsets would be synchronized with the session. Higher values would provide phase synchronization across multiple beats. For example, a value of 4 would cause this instance to be aligned to a 4/4 bar with any other instances in the session that have a quantum of 4 (or a multiple of 4).
 
 #### `ABLLinkDelete`
 
@@ -175,99 +190,143 @@ Invoked on the main thread when the user changes the enabled state of the librar
     <span>void</span> *context);
 </code>
 
-#### `ABLLinkProposeTempo`
+#### `ABLLinkSetIsConnectedCallback`
 
-Propose a new tempo to the link session.
+Invoked on the main thread when the isConnected state of the library changes.
 
-<code class="is-block"><span>void</span> ABLLinkProposeTempo(
+<code class="is-block"><span>void</span> ABLLinkSetIsConnectedCallback(
     ABLLinkRef,
+    <span>ABLLinkIsConnectedCallback</span> callback,
+    <span>void</span> *context);
+</code>
+
+#### `ABLLinkCaptureAudioTimeline`
+
+Capture the current Link timeline from the audio thread.
+
+<code class="is-block"><span>ABLLinkTimelineRef</span> ABLLinkCaptureAudioTimeline(
+    ABLLinkRef);
+</code>
+
+This function is lockfree and should ONLY be called in the audio thread. It must not be accessed from any other threads. The returned reference refers to a snapshot of the current Link state, so it should be captured and used in a local scope. Storing the Timeline for later use in a different context is not advised because it will provide an outdated view on the Link state.
+
+####`ABLLinkCommitAudioTimeline`
+
+Commit the given timeline to the Link session from the audio thread.
+
+<code class="is-block"><span>void</span> ABLLinkCommitAudioTimeline(
+    ABLLinkRef,
+    ABLLinkTimelineRef);
+</code>
+
+This function is lockfree and should ONLY be called in the audio thread. The given timeline will replace the current Link timeline. Modifications to the session based on the new timeline will be communicated to other peers in the session.
+
+####`ABLLinkCaptureAppTimeline`
+
+Capture the current Link timeline from the main application thread.
+
+<code class="is-block"><span>ABLLinkTimelineRef</span> ABLLinkCaptureAppTimeline(
+    ABLLinkRef);
+</code>
+
+This function provides the ability to query the Link timeline from the main application thread and should only be used from that thread. The returned Timeline stores a snapshot of the current Link state, so it should be captured and used in a local scope. Storing the Timeline for later use in a different context is not advised because it will provide an outdated view on the Link state.
+
+####`ABLLinkCommitAppTimeline`
+
+Commit the timeline to the Link session from the main application thread.
+
+<code class="is-block"><span>void</span> ABLLinkCommitAppTimeline(
+    ABLLinkRef,
+    ABLLinkTimelineRef);
+</code>
+
+This function should ONLY be called in the main thread. The given timeline will replace the current Link timeline. Modifications to the session based on the new timeline will be communicated to other peers in the session.
+
+####`ABLLinkGetTempo`
+
+The tempo of the given timeline, in Beats Per Minute.
+
+<code class="is-block"><span>double</span> ABLLinkGetTempo(
+  ABLLinkTimelineRef);
+</code>
+
+This is a stable value that is appropriate for display to the user. Beat time progress will not necessarily match this tempo exactly because of clock drift compensation.
+
+####`ABLLinkSetTempo`
+
+Set the timeline tempo to the given bpm value, taking effect at the given host time.
+
+<code class="is-block"><span>void</span> ABLLinkSetTempo(
+    ABLLinkTimelineRef,
     <span>double</span> bpm,
     <span>uint64_t</span> hostTimeAtOutput);
 </code>
 
-**Parameters:**
+####`ABLLinkBeatTimeAtHostTime`
 
-- `bpm`: The new tempo to be used by the session.
-- `hostTimeAtOutput`: The host time at which the change should occur. If the host time is too far in the past or future, the proposal may be rejected.
-
-#### `ABLLinkGetSessionTempo`
-
-Get the current tempo for the link session in Beats Per Minute.
-
-<code class="is-block"><span>double</span> ABLLinkGetSessionTempo(
-    ABLLinkRef);
-</code>
-
-This is a stable value that is appropriate for display to the user (unlike the value derived for a given audio buffer, which will vary due to clock drift, latency compensation, etc.)
-
-#### `ABLLinkBeatTimeAtHostTime`
-
-Conversion function to determine which value on the beat timeline should be hitting the device's output at the given host time.
+Get the beat value corresponding to the given host time for the given quantum.
 
 <code class="is-block"><span>double</span> ABLLinkBeatTimeAtHostTime(
-    ABLLinkRef,
-    <span>uint64_t</span> hostTimeAtOutput);
-</code>
-
-In order to determine the host time at the device output, the AVAudioSession outputLatency property must be taken into consideration along with any additional buffering latency introduced by the software. This function guarantees a proportional relationship between hostTimeAtOutput and the resulting beat time: hostTime_2 > hostTime_1 => beatTime_2 > beatTime_1 when called twice from the same thread.
-
-#### `ABLLinkHostTimeAtBeatTime`
-
-Conversion function to determine which host time at the device's output represents the given beat time value.
-
-<code class="is-block"><span>uint64_t</span> ABLLinkHostTimeAtBeatTime(
-    ABLLinkRef,
-    <span>double</span> beatTime);
-</code>
-
-This function does not guarantee a backwards conversion of the value returned by ABLLinkBeatTimeAtHostTime.
-
-#### `ABLLinkResetBeatTime`
-
-Reset the beat timeline with a desire to map the given beat time to the given host time, returning the actual beat time value that maps to the given host time.
-
-<code class="is-block"><span>double</span> ABLLinkResetBeatTime(
-    ABLLinkRef,
-    <span>double</span> beatTime,
-    <span>uint64_t</span> hostTimeAtOutput);
-</code>
-
-The returned value will differ from the requested beat time by up to a quantum due to quantization, but will always be less than or equal to the given beat time.
-
-#### `ABLLinkSetQuantum`
-
-Set the value used for quantization to the shared beat grid.
-
-<code class="is-block"><span>void</span> ABLLinkSetQuantum(
-    ABLLinkRef,
+    ABLLinkTimelineRef,
+    <span>uint64_t</span> hostTimeAtOutput,
     <span>double</span> quantum);
 </code>
 
-**Parameters:**
+The magnitude of the resulting beat value is unique to this Link instance, but its phase with respect to the provided quantum is shared among all session peers. For non-negative beat values, the following property holds: fmod(ABLLinkBeatTimeAtHostTime(tl, ht, q), q) == ABLLinkPhaseAtTime(tl, ht, q).
 
-- `quantum` in beats
+####`ABLLinkHostTimeAtBeatTime`
 
-The quantum value set here will be used when joining a session and whenresetting the beat timeline with ABLLinkResetBeatTime. It doesn't affect the results of the beat time / host time conversion functions and therefore will not cause a beat time jump if invoked while playing.
+Get the host time at which the sound corresponding to the given beat time and quantum reaches the device's audio output.
 
-#### `ABLLinkGetQuantum`
-
-Get the value currently being used by the system for quantization to the shared beat grid.
-
-<code class="is-block"><span>double</span> ABLLinkGetQuantum(
-    ABLLinkRef);
+<code class="is-block"><span>uint64_t</span> ABLLinkHostTimeAtBeatTime(
+    ABLLinkTimelineRef,
+    <span>double</span> beatTime,
+    <span>double</span> quantum);
 </code>
 
-#### `ABLLinkPhase`
+The inverse of ABLLinkBeatTimeAtHostTime, assuming a constant tempo.
+<code>ABLLinkBeatTimeAtHostTime(tl, *ABLLinkHostTimeAtBeatTime(tl, b, q), q) == b</code>
+
+####`ABLLinkPhaseAtTime`
 
 Get the phase for a given beat time value on the shared beat grid with respect to the given quantum.
 
-<code class="is-block"><span>double</span> ABLLinkPhase(
-    ABLLinkRef,
-    <span>double</span> beatTime,
+<code class="is-block"><span>double</span>ABLLinkPhaseAtTime(
+    ABLLinkTimelineRef,
+    <span>uint64_t</span> hostTimeAtOutput,
     <span>double</span> quantum);
 </code>
 
-The beat timeline exposed by the ABLLink functions are aligned to the shared beat grid according to the quantum value that was set at initialization or at the last call to ABLLinkResetBeatTime. This function allows access to the phase of beat time values with respect to other quanta. The returned value will be in the range [0, quantum).
+This function allows access to the phase of a host time as described above with respect to a quantum. The returned value will be in the range [0, quantum].
+
+####`ABLLinkRequestBeatAtTime`
+
+Attempt to map the given beat time to the given host time in the context of the given quantum.
+
+<code class="is-block"><span>void</span> ABLLinkRequestBeatAtTime(
+    ABLLinkTimelineRef,
+    <span>double</span> beatTime,
+    <span>uint64_t</span> hostTimeAtOutput,
+    <span>double</span> quantum);
+</code>
+
+This function behaves differently depending on the state of the session. If no other peers are connected, then this instance is in a session by itself and is free to re-map the beat/time relationship whenever it pleases.
+If there are other peers in the session, this instance should not abruptly re-map the beat/time relationship in the session because that would lead to beat discontinuities among the other peers. In this case, the given beat will be mapped to the next time value greater than the given time with the same phase as the given beat.
+This function is specifically designed to enable the concept of "quantized launch" in client applications. If there are no other peers in the session, then an event (such as starting transport) happens immediately when it is requested. If there are other peers, however, we wait until the next time at which the session phase matches the phase of the event, thereby executing the event in-phase with the other peers in the session. The client only needs to invoke this method to achieve this behavior and should not need to explicitly check the number of peers.
+
+####`ABLLinkForceBeatAtTime`
+
+Rudely re-map the beat/time relationship for all peers in a session.
+
+<code class="is-block"><span>void</span> ABLLinkForceBeatAtTime(
+    ABLLinkTimelineRef,
+     <span>double</span> beatTime,
+     <span>uint64_t</span> hostTimeAtOutput,
+     <span>double</span> quantum);
+</code>
+
+DANGER: This function should only be needed in certain special circumstances. Most applications should not use it. It is very similar to ABLLinkRequestBeatAtTime except that it does not fall back to the quantizing behavior when it is in a session with other peers. Calling this method will unconditionally map the given beat time to the given host time and broadcast the result to the session. This is very anti-social behavior and should be avoided.
+One of the few legitimate uses of this method is to synchronize a Link session with an external clock source. By periodically forcing the beat/time mapping according to an external clock source, a peer can effectively bridge that clock into a Link session. Much care must be taken at the application layer when implementing such a feature so that users do not accidentally disrupt Link sessions that they may join.
 
 ## ABLLinkSettingsViewController.h
 Copyright 2016, Ableton AG, Berlin. All rights reserved.
