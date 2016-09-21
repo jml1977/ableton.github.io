@@ -4,6 +4,8 @@ active_page: protocol
 title: Link Protocol Documentation
 ---
 
+*WORK-IN-PROGRESS*
+
 # Network Protocol
 
 ## Introduction
@@ -60,7 +62,7 @@ Body is different depending on the MessageType
 The body consists of 3 blocks:
 
 | Value | Key | Length | Comment |
-| ----- | --- | ------ | ------- |
+| ----- | --- | -----: | ------- |
 | Timeline | ```tmln``` | 32 bytes | |
 | Session | ```sess``` | 16 bytes | |
 | measurement endpoint v4 | ```mep4``` | 14 bytes | |
@@ -68,7 +70,7 @@ The body consists of 3 blocks:
 Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicating the length of the value which follows
 
 | Value | Length | Comment |
-| ----- | ------ | ------- |
+| ----- | -----: | ------- |
 | Key | 4 bytes | |
 | Length | 4 bytes | |
 | Value | Depending on ```Length``` field |
@@ -76,10 +78,10 @@ Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicatin
 #### Timeline
 
 | Value | Length | Comment |
-| ----- | ------ | ------- |
-| Tempo | 1 byte | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
-| Beats | 1 byte | |
-| TimeOrigin | 1 byte | |
+| ----- | -----: | ------- |
+| Tempo | 8 byte | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
+| Beats | 8? byte | |
+| TimeOrigin | 8? byte | |
 
 #### Session
 
