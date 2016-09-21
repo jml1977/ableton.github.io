@@ -15,7 +15,7 @@ This describes version 1 of the protocol (only one supported at this time)
 # concepts
 
 
-## Multicast group
+## UDP Multicast group
 
 224.76.78.75
 
@@ -26,7 +26,7 @@ This describes version 1 of the protocol (only one supported at this time)
 | Value         | Length      | Comment              |
 |:--------------|------------:|:---------------------|
 | ```_asdp_v``` | 7 bytes     | Protocol Recognition |
-|          0x01 | 1 byte      | Protocol version (1) |
+|    ```0x01``` | 1 byte      | Protocol version (1) |
 |        Header | 12 bytes    | Message Header       |
 |         Body  | ...         |                      |
 
@@ -46,10 +46,10 @@ Note: NodeId always consists of printable characters (ASCII character range 33-1
 
 | Value | Comment  |
 | ----- | -------- |
-|  0x00 | INVALID  |
-|  0x01 | ALIVE    |
-|  0x02 | RESPONSE |
-|  0x03 | BYEBYE   |
+|  0x00 | ```INVALID```  |
+|  0x01 | ```ALIVE```    |
+|  0x02 | ```RESPONSE``` |
+|  0x03 | ```BYEBYE```   |
 
 ## Body
 
@@ -57,20 +57,30 @@ Body is different depending on the MessageType
 
 ### ALIVE
 
-The body consists of 3 blocks
-- timeline ('tmln')
-- session ('sess')
-- measurement endpoint v4 'mep4'
+The body consists of 3 blocks:
+
+| Value | Key | Length | Comment |
+| ----- | --- | ------ | ------- |
+| Timeline | ```tmln``` | 32 bytes | |
+| Session | ```sess``` | 16 bytes | |
+| measurement endpoint v4 | ```mep4``` | 14 bytes | |
 
 Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicating the length of the value which follows
 
 | Value | Length | Comment |
+| ----- | ------ | ------- |
 | Key | 4 bytes | |
 | Length | 4 bytes | |
-| Value | Depending on Length field |
+| Value | Depending on ```Length``` field |
 
-#### timeline
+#### Timeline
 
-#### session
+| Value | Length | Comment |
+| ----- | ------ | ------- |
+| Tempo | 1 byte | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
+| Beats | 1 byte | |
+| TimeOrigin | 1 byte | |
+
+#### Session
 
 #### Measurement Endpoint v4
