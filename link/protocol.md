@@ -10,7 +10,7 @@ title: Link Protocol Documentation
 
 ## Introduction
 
-Link uses UDP multicast for broadcast over the local Network.
+Ableton Link uses UDP multicast for broadcast over the local Network.
 
 This describes version 1 of the protocol (only one supported at this time)
 
