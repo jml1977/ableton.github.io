@@ -19,7 +19,8 @@ This describes version 1 of the protocol (only one supported at this time)
 
 ## UDP Multicast group
 
-224.76.78.75
+Hostname: 224.76.78.75
+Port: 20808
 
 # Protocol
 
@@ -61,28 +62,37 @@ Body is different depending on the MessageType
 
 The body consists of 3 blocks:
 
-| Value | Key | Length | Comment |
-| ----- | --- | -----: | ------- |
-| Timeline | ```tmln``` | 32 bytes | |
-| Session | ```sess``` | 16 bytes | |
+| Value    | Key          | Length   | Comment |
+| :------- | :----------- | -------: | :------ |
+| Timeline | ```tmln```   | 32 bytes | |
+| Session  | ```sess```   | 16 bytes | |
 | measurement endpoint v4 | ```mep4``` | 14 bytes | |
 
 Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicating the length of the value which follows
 
-| Value | Length | Comment |
-| ----- | -----: | ------- |
-| Key | 4 bytes | |
-| Length | 4 bytes | |
-| Value | Depending on ```Length``` field |
+| Value  | Length                          | Comment |
+| :----- | ------------------------------: | :------ |
+| Key    | 4 bytes                         |         |
+| Length | 4 bytes                         |         |
+| Value  | Depending on ```Length``` field |         |
 
 #### Timeline
 
-| Value | Length | Comment |
-| ----- | -----: | ------- |
-| Tempo | 8 byte | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
-| Beats | 8? byte | |
+| Value      | Length  | Comment |
+| :--------- | ------: | :------ |
+| Tempo      | 8 byte  | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
+| Beats      | 8? byte | |
 | TimeOrigin | 8? byte | |
 
 #### Session
 
+| Value      | Length  | Comment |
+| :--------- | ------: | :------ |
+| NodeId     | 8 byte  | NodeId of the initiating session |
+
 #### Measurement Endpoint v4
+
+| Value        | Length  | Comment |
+| :----------- | ------: | :------ |
+| IPv4 address | 8 byte  | |
+| Port number  | 2 byte  | |
