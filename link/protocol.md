@@ -20,6 +20,7 @@ This describes version 1 of the protocol (only one supported at this time)
 ## UDP Multicast group
 
 Hostname: 224.76.78.75
+
 Port: 20808
 
 # Protocol
@@ -66,7 +67,7 @@ The body consists of 3 blocks:
 | :------- | :----------- | -------: | :------ |
 | Timeline | ```tmln```   | 32 bytes | |
 | Session  | ```sess```   | 16 bytes | |
-| measurement endpoint v4 | ```mep4``` | 14 bytes | |
+| Measurement Endpoint v4 | ```mep4``` | 14 bytes | |
 
 Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicating the length of the value which follows
 
@@ -81,8 +82,8 @@ Each of these blocks starts with a key of 4 bytes, followed by 4 bytes indicatin
 | Value      | Length  | Comment |
 | :--------- | ------: | :------ |
 | Tempo      | 8 byte  | ```bpm``` = 60 * ( 1e6 / ```Tempo``` ) |
-| Beats      | 8? byte | |
-| TimeOrigin | 8? byte | |
+| Beats      | 8 byte | |
+| TimeOrigin | 8 byte | |
 
 #### Session
 
